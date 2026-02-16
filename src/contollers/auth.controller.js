@@ -29,4 +29,38 @@ async function registerUser(req,res){
     })
 
 }
-module.exports={registerUser}
+async function loginUser(req,res) {
+    const {email,name,password}=req.body
+    const user=await userModel.findOne({
+        $or:[
+            {email},
+            {name}
+        ]
+    }).select('+password')
+    if(!user){
+        return res.status(401).json({
+            message:'Invalid gmail or username'
+        })
+    }
+    const isValidPassword=await user.comparePassword(password)
+    if(!isValidPassword){
+         return res.status(401).json({
+            message:'Invalid Password'
+        })
+    }
+    const token=jwt.sign({
+        userId:user._id
+    },process.env.JWT_SECRET,{expiresIn:'3d'})
+    res.cookie('token',token)
+    res.status(201).json({
+        message:'Login Sucessfully',
+        user:{
+            name:user.name,
+            email:user.email,
+            password:user.password,
+            id:user._id
+        },token
+    })
+}
+
+module.exports={registerUser,loginUser}
